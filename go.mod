@@ -1,4 +1,4 @@
-module github.com/fhmq/hmq
+module github.com/shurkaxaa/hmq
 
 go 1.12
 
