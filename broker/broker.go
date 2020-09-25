@@ -8,15 +8,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/fhmq/hmq/plugins/bridge"
+	"github.com/shurkaxaa/hmq/plugins/bridge"
 
-	"github.com/fhmq/hmq/plugins/auth"
+	"github.com/shurkaxaa/hmq/plugins/auth"
 
-	"github.com/fhmq/hmq/broker/lib/sessions"
-	"github.com/fhmq/hmq/broker/lib/topics"
+	"github.com/shurkaxaa/hmq/broker/lib/sessions"
+	"github.com/shurkaxaa/hmq/broker/lib/topics"
 
 	"github.com/eclipse/paho.mqtt.golang/packets"
-	"github.com/fhmq/hmq/pool"
+	"github.com/shurkaxaa/hmq/pool"
 	"go.uber.org/zap"
 	"golang.org/x/net/websocket"
 )
