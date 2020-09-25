@@ -33,13 +33,13 @@ type Message struct {
 
 type Hooks interface {
 	// return true if auth success and client metadata
-	Authorize(*packets.ConnectPacket) (bool, interface{})
+	Authorize(*Broker, *packets.ConnectPacket) (bool, interface{})
 
 	// called on publish to authorize publish with client metadata from auth
-	Publish(*packets.PublishPacket, interface{}) bool
+	Publish(*Broker, *packets.PublishPacket, interface{}) bool
 
 	// called on subscribe to authorize subscribe with client metadata from auth
-	Subscribe(*packets.SubscribePacket, interface{}) bool
+	Subscribe(*Broker, *packets.SubscribePacket, interface{}) bool
 }
 
 type Broker struct {
@@ -306,7 +306,7 @@ func (b *Broker) handleConnection(typ int, conn net.Conn) {
 
 	var clientAuthMeta interface{} = nil
 	if b.hooks != nil {
-		if auth, meta := b.hooks.Authorize(msg); !auth {
+		if auth, meta := b.hooks.Authorize(b, msg); !auth {
 			connack.ReturnCode = packets.ErrRefusedNotAuthorised
 			err = connack.Write(conn)
 			if err != nil {
