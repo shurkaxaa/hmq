@@ -257,6 +257,11 @@ func (c *client) processClientPublish(packet *packets.PublishPacket) {
 		return
 	}
 
+	if c.broker.hooks != nil && !c.broker.hooks.Publish(packet) {
+		log.Error("Pub Topics Auth failed, ", zap.String("topic", topic), zap.String("ClientID", c.info.clientID))
+		return
+	}
+
 	//publish kafka
 	c.broker.Publish(&bridge.Elements{
 		ClientID:  c.info.clientID,
@@ -370,6 +375,12 @@ func (c *client) processClientSubscribe(packet *packets.SubscribePacket) {
 		t := topic
 		//check topic auth for client
 		if !b.CheckTopicAuth(SUB, c.info.clientID, c.info.username, c.info.remoteIP, topic) {
+			log.Error("Sub topic Auth failed: ", zap.String("topic", topic), zap.String("ClientID", c.info.clientID))
+			retcodes = append(retcodes, QosFailure)
+			continue
+		}
+
+		if c.broker.hooks != nil && !c.broker.hooks.Subscribe(packet) {
 			log.Error("Sub topic Auth failed: ", zap.String("topic", topic), zap.String("ClientID", c.info.clientID))
 			retcodes = append(retcodes, QosFailure)
 			continue

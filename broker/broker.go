@@ -31,6 +31,12 @@ type Message struct {
 	packet packets.ControlPacket
 }
 
+type Hooks interface {
+	Authorize(*packets.ConnectPacket) bool
+	Publish(*packets.PublishPacket) bool
+	Subscribe(*packets.SubscribePacket) bool
+}
+
 type Broker struct {
 	id          string
 	mu          sync.Mutex
@@ -46,6 +52,7 @@ type Broker struct {
 	sessionMgr  *sessions.Manager
 	auth        auth.Auth
 	bridgeMQ    bridge.BridgeMQ
+	hooks       Hooks
 }
 
 func newMessagePool() []chan *Message {
@@ -57,7 +64,7 @@ func newMessagePool() []chan *Message {
 	return pool
 }
 
-func NewBroker(config *Config) (*Broker, error) {
+func NewBroker(config *Config, hooks Hooks) (*Broker, error) {
 	if config == nil {
 		config = DefaultConfig
 	}
@@ -68,6 +75,7 @@ func NewBroker(config *Config) (*Broker, error) {
 		wpool:       pool.New(config.Worker),
 		nodes:       make(map[string]interface{}),
 		clusterPool: make(chan *Message),
+		hooks:       hooks,
 	}
 
 	var err error
@@ -282,6 +290,16 @@ func (b *Broker) handleConnection(typ int, conn net.Conn) {
 	}
 
 	if typ == CLIENT && !b.CheckConnectAuth(string(msg.ClientIdentifier), string(msg.Username), string(msg.Password)) {
+		connack.ReturnCode = packets.ErrRefusedNotAuthorised
+		err = connack.Write(conn)
+		if err != nil {
+			log.Error("send connack error, ", zap.Error(err), zap.String("clientID", msg.ClientIdentifier))
+			return
+		}
+		return
+	}
+
+	if b.hooks != nil && !b.hooks.Authorize(msg) {
 		connack.ReturnCode = packets.ErrRefusedNotAuthorised
 		err = connack.Write(conn)
 		if err != nil {

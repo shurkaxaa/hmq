@@ -16,7 +16,7 @@ func main() {
 		log.Fatal("configure broker config error: ", err)
 	}
 
-	b, err := broker.NewBroker(config)
+	b, err := broker.NewBroker(config, nil)
 	if err != nil {
 		log.Fatal("New Broker error: ", err)
 	}
