@@ -80,6 +80,7 @@ type info struct {
 	willMsg   *packets.PublishPacket
 	localIP   string
 	remoteIP  string
+	authMeta  interface{}
 }
 
 type route struct {
@@ -257,7 +258,7 @@ func (c *client) processClientPublish(packet *packets.PublishPacket) {
 		return
 	}
 
-	if c.broker.hooks != nil && !c.broker.hooks.Publish(packet) {
+	if c.broker.hooks != nil && !c.broker.hooks.Publish(packet, c.info.authMeta) {
 		log.Error("Pub Topics Auth failed, ", zap.String("topic", topic), zap.String("ClientID", c.info.clientID))
 		return
 	}
@@ -380,7 +381,7 @@ func (c *client) processClientSubscribe(packet *packets.SubscribePacket) {
 			continue
 		}
 
-		if c.broker.hooks != nil && !c.broker.hooks.Subscribe(packet) {
+		if c.broker.hooks != nil && !c.broker.hooks.Subscribe(packet, c.info.authMeta) {
 			log.Error("Sub topic Auth failed: ", zap.String("topic", topic), zap.String("ClientID", c.info.clientID))
 			retcodes = append(retcodes, QosFailure)
 			continue

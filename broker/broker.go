@@ -32,9 +32,14 @@ type Message struct {
 }
 
 type Hooks interface {
-	Authorize(*packets.ConnectPacket) bool
-	Publish(*packets.PublishPacket) bool
-	Subscribe(*packets.SubscribePacket) bool
+	// return true if auth success and client metadata
+	Authorize(*packets.ConnectPacket) (bool, interface{})
+
+	// called on publish to authorize publish with client metadata from auth
+	Publish(*packets.PublishPacket, interface{}) bool
+
+	// called on subscribe to authorize subscribe with client metadata from auth
+	Subscribe(*packets.SubscribePacket, interface{}) bool
 }
 
 type Broker struct {
@@ -299,14 +304,19 @@ func (b *Broker) handleConnection(typ int, conn net.Conn) {
 		return
 	}
 
-	if b.hooks != nil && !b.hooks.Authorize(msg) {
-		connack.ReturnCode = packets.ErrRefusedNotAuthorised
-		err = connack.Write(conn)
-		if err != nil {
-			log.Error("send connack error, ", zap.Error(err), zap.String("clientID", msg.ClientIdentifier))
+	var clientAuthMeta interface{} = nil
+	if b.hooks != nil {
+		if auth, meta := b.hooks.Authorize(msg); !auth {
+			connack.ReturnCode = packets.ErrRefusedNotAuthorised
+			err = connack.Write(conn)
+			if err != nil {
+				log.Error("send connack error, ", zap.Error(err), zap.String("clientID", msg.ClientIdentifier))
+				return
+			}
 			return
+		} else {
+			clientAuthMeta = meta
 		}
-		return
 	}
 
 	err = connack.Write(conn)
@@ -331,6 +341,7 @@ func (b *Broker) handleConnection(typ int, conn net.Conn) {
 		password:  msg.Password,
 		keepalive: msg.Keepalive,
 		willMsg:   willmsg,
+		authMeta:  clientAuthMeta,
 	}
 
 	c := &client{
