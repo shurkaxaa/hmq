@@ -305,7 +305,7 @@ func (b *Broker) handleConnection(typ int, conn net.Conn) {
 	}
 
 	var clientAuthMeta interface{} = nil
-	if b.hooks != nil {
+	if typ == CLIENT && b.hooks != nil {
 		if auth, meta := b.hooks.Authorize(b, msg); !auth {
 			connack.ReturnCode = packets.ErrRefusedNotAuthorised
 			err = connack.Write(conn)
