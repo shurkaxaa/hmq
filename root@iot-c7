@@ -1,0 +1,59 @@
+diff --git a/broker/client.go b/broker/client.go
+index a561d0d..d296737 100644
+--- a/broker/client.go
++++ b/broker/client.go
+@@ -212,6 +212,7 @@ func (c *client) ProcessPublish(packet *packets.PublishPacket) {
+ }
+ 
+ func (c *client) processRemotePublish(packet *packets.PublishPacket) {
++	log.Debug("Publish from remote")
+ 	if c.status == Disconnected {
+ 		return
+ 	}
+@@ -225,6 +226,7 @@ func (c *client) processRemotePublish(packet *packets.PublishPacket) {
+ }
+ 
+ func (c *client) processRouterPublish(packet *packets.PublishPacket) {
++	log.Debug("Publish from router")
+ 	if c.status == Disconnected {
+ 		return
+ 	}
+@@ -250,6 +252,7 @@ func (c *client) processRouterPublish(packet *packets.PublishPacket) {
+ }
+ 
+ func (c *client) processClientPublish(packet *packets.PublishPacket) {
++	log.Debug("Publish from client")
+ 
+ 	topic := packet.TopicName
+ 
+@@ -322,11 +325,30 @@ func (c *client) ProcessPublishMessage(packet *packets.PublishPacket) {
+ 	for i, sub := range c.subs {
+ 		s, ok := sub.(*subscription)
+ 		if ok {
++			log.Debug("Check subscriber: ",
++				zap.String("brokerID", s.client.broker.id),
++				zap.String("Client ID", c.info.clientID),
++				zap.Int("Client type", typ),
++				zap.String("Subscriber clientID", s.client.info.clientID),
++				zap.Int("Subscriber client type", s.client.typ))
+ 			if s.client.typ == ROUTER {
+ 				if typ != CLIENT {
+ 					continue
+ 				}
+ 			}
++
++			if typ == ROUTER && s.client.typ != CLIENT {
++				// we should not re-route, only pubish to local subscribers
++				continue
++			}
++
++			if typ == CLIENT {
++				if s.client.typ != CLIENT && s.client.typ != REMOTE {
++					// client can only publish to local clients and remote subscribers
++					continue
++				}
++			}
++
+ 			if s.share {
+ 				qsub = append(qsub, i)
+ 			} else {

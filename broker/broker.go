@@ -32,6 +32,8 @@ type Message struct {
 }
 
 type Hooks interface {
+	GetBrokerId() string
+
 	// return true if auth success and client metadata
 	Authorize(*Broker, *packets.ConnectPacket) (bool, interface{})
 
@@ -40,6 +42,10 @@ type Hooks interface {
 
 	// called on subscribe to authorize subscribe with client metadata from auth
 	Subscribe(*Broker, *packets.SubscribePacket, interface{}) bool
+
+	// called on connet/disconnect with client metadata from auth
+	Connected(interface{})
+	Disconnected(interface{})
 }
 
 type Broker struct {
@@ -74,8 +80,13 @@ func NewBroker(config *Config, hooks Hooks) (*Broker, error) {
 		config = DefaultConfig
 	}
 
+	id := GenUniqueId()
+	if hooks != nil {
+		id = hooks.GetBrokerId()
+	}
+
 	b := &Broker{
-		id:          GenUniqueId(),
+		id:          id,
 		config:      config,
 		wpool:       pool.New(config.Worker),
 		nodes:       make(map[string]interface{}),
@@ -377,6 +388,9 @@ func (b *Broker) handleConnection(typ int, conn net.Conn) {
 		b.clients.Store(cid, c)
 
 		b.OnlineOfflineNotification(cid, true)
+		if b.hooks != nil {
+			b.hooks.Connected(c.info.authMeta)
+		}
 		{
 			b.Publish(&bridge.Elements{
 				ClientID:  string(msg.ClientIdentifier),
