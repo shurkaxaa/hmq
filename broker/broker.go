@@ -44,8 +44,8 @@ type Hooks interface {
 	Subscribe(*Broker, *packets.SubscribePacket, interface{}) bool
 
 	// called on connet/disconnect with client metadata from auth
-	Connected(interface{})
-	Disconnected(interface{})
+	Connected(interface{}, *sessions.Session)
+	Disconnected(interface{}, *sessions.Session)
 }
 
 type Broker struct {
@@ -389,7 +389,8 @@ func (b *Broker) handleConnection(typ int, conn net.Conn) {
 
 		b.OnlineOfflineNotification(cid, true)
 		if b.hooks != nil {
-			b.hooks.Connected(c.info.authMeta)
+			c.session.CleanSession()
+			b.hooks.Connected(c.info.authMeta, c.session)
 		}
 		{
 			b.Publish(&bridge.Elements{

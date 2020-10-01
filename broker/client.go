@@ -679,7 +679,7 @@ func (c *client) Close() {
 			//offline notification
 			b.OnlineOfflineNotification(c.info.clientID, false)
 			if b.hooks != nil {
-				b.hooks.Disconnected(c.info.authMeta)
+				b.hooks.Disconnected(c.info.authMeta, c.session)
 			}
 		}
 
