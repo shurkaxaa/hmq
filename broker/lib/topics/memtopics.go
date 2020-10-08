@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"sync"
 
+	"github.com/alexandercampbell-wf/matchbox"
 	"github.com/eclipse/paho.mqtt.golang/packets"
 )
 
@@ -27,6 +28,7 @@ type memTopics struct {
 	rmu sync.RWMutex
 	// Retained messages topic tree
 	rroot *rnode
+	ctrie matchbox.Matchbox
 }
 
 func init() {
@@ -41,6 +43,11 @@ func NewMemProvider() *memTopics {
 	return &memTopics{
 		sroot: newSNode(),
 		rroot: newRNode(),
+		ctrie: matchbox.New(&matchbox.Config{
+			SingleWildcard:     "+",
+			ZeroOrMoreWildcard: "#",
+			Delimiter:          "/",
+		}),
 	}
 }
 
@@ -48,7 +55,7 @@ func ValidQos(qos byte) bool {
 	return qos == QosAtMostOnce || qos == QosAtLeastOnce || qos == QosExactlyOnce
 }
 
-func (this *memTopics) Subscribe(topic []byte, qos byte, sub interface{}) (byte, error) {
+func (this *memTopics) Subscribe(topic []byte, qos byte, sub matchbox.Subscriber) (byte, error) {
 	if !ValidQos(qos) {
 		return QosFailure, fmt.Errorf("Invalid QoS %d", qos)
 	}
@@ -57,40 +64,49 @@ func (this *memTopics) Subscribe(topic []byte, qos byte, sub interface{}) (byte,
 		return QosFailure, fmt.Errorf("Subscriber cannot be nil")
 	}
 
-	this.smu.Lock()
-	defer this.smu.Unlock()
-
-	if qos > QosExactlyOnce {
-		qos = QosExactlyOnce
-	}
-
-	if err := this.sroot.sinsert(topic, qos, sub); err != nil {
-		return QosFailure, err
-	}
-
+	// ctrie
+	this.ctrie.Subscribe(string(topic), sub)
 	return qos, nil
+
+	// this.smu.Lock()
+	// defer this.smu.Unlock()
+
+	// if qos > QosExactlyOnce {
+	// 	qos = QosExactlyOnce
+	// }
+
+	// if err := this.sroot.sinsert(topic, qos, sub); err != nil {
+	// 	return QosFailure, err
+	// }
+
+	// return qos, nil
 }
 
-func (this *memTopics) Unsubscribe(topic []byte, sub interface{}) error {
-	this.smu.Lock()
-	defer this.smu.Unlock()
+func (this *memTopics) Unsubscribe(topic []byte, sub matchbox.Subscriber) error {
+	this.ctrie.Unsubscribe(string(topic), sub)
+	return nil
+	// this.smu.Lock()
+	// defer this.smu.Unlock()
 
-	return this.sroot.sremove(topic, sub)
+	// return this.sroot.sremove(topic, sub)
 }
 
 // Returned values will be invalidated by the next Subscribers call
-func (this *memTopics) Subscribers(topic []byte, qos byte, subs *[]interface{}, qoss *[]byte) error {
+func (this *memTopics) Subscribers(topic []byte, qos byte, subs *[]matchbox.Subscriber, qoss *[]byte) error {
 	if !ValidQos(qos) {
 		return fmt.Errorf("Invalid QoS %d", qos)
 	}
 
-	this.smu.RLock()
-	defer this.smu.RUnlock()
+	*subs = this.ctrie.Subscribers(string(topic))
+	return nil
 
-	*subs = (*subs)[0:0]
-	*qoss = (*qoss)[0:0]
+	// this.smu.RLock()
+	// defer this.smu.RUnlock()
 
-	return this.sroot.smatch(topic, qos, subs, qoss)
+	// *subs = (*subs)[0:0]
+	// *qoss = (*qoss)[0:0]
+
+	// return this.sroot.smatch(topic, qos, subs, qoss)
 }
 
 func (this *memTopics) Retain(msg *packets.PublishPacket) error {

@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/alexandercampbell-wf/matchbox"
 	"github.com/shurkaxaa/hmq/broker/lib/sessions"
 	"github.com/shurkaxaa/hmq/broker/lib/topics"
 	"github.com/shurkaxaa/hmq/plugins/bridge"
@@ -58,7 +59,7 @@ type client struct {
 	session     *sessions.Session
 	subMap      map[string]*subscription
 	topicsMgr   *topics.Manager
-	subs        []interface{}
+	subs        []matchbox.Subscriber
 	qoss        []byte
 	rmsgs       []*packets.PublishPacket
 	routeSubMap map[string]uint64
@@ -70,6 +71,11 @@ type subscription struct {
 	qos       byte
 	share     bool
 	groupName string
+	id        string
+}
+
+func (this *subscription) ID() string {
+	return this.id
 }
 
 type info struct {
@@ -441,6 +447,7 @@ func (c *client) processClientSubscribe(packet *packets.SubscribePacket) {
 			client:    c,
 			share:     share,
 			groupName: groupName,
+			id:        c.info.clientID + topic,
 		}
 
 		rqos, err := c.topicsMgr.Subscribe([]byte(topic), qoss[i], sub)
@@ -515,6 +522,7 @@ func (c *client) processRouterSubscribe(packet *packets.SubscribePacket) {
 			client:    c,
 			share:     share,
 			groupName: groupName,
+			id:        c.info.clientID + topic,
 		}
 
 		rqos, err := c.topicsMgr.Subscribe([]byte(topic), qoss[i], sub)

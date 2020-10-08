@@ -3,6 +3,7 @@ package topics
 import (
 	"fmt"
 
+	"github.com/alexandercampbell-wf/matchbox"
 	"github.com/eclipse/paho.mqtt.golang/packets"
 )
 
@@ -29,9 +30,9 @@ var (
 
 // TopicsProvider
 type TopicsProvider interface {
-	Subscribe(topic []byte, qos byte, subscriber interface{}) (byte, error)
-	Unsubscribe(topic []byte, subscriber interface{}) error
-	Subscribers(topic []byte, qos byte, subs *[]interface{}, qoss *[]byte) error
+	Subscribe(topic []byte, qos byte, subscriber matchbox.Subscriber) (byte, error)
+	Unsubscribe(topic []byte, subscriber matchbox.Subscriber) error
+	Subscribers(topic []byte, qos byte, subs *[]matchbox.Subscriber, qoss *[]byte) error
 	Retain(msg *packets.PublishPacket) error
 	Retained(topic []byte, msgs *[]*packets.PublishPacket) error
 	Close() error
@@ -66,15 +67,15 @@ func NewManager(providerName string) (*Manager, error) {
 	return &Manager{p: p}, nil
 }
 
-func (this *Manager) Subscribe(topic []byte, qos byte, subscriber interface{}) (byte, error) {
+func (this *Manager) Subscribe(topic []byte, qos byte, subscriber matchbox.Subscriber) (byte, error) {
 	return this.p.Subscribe(topic, qos, subscriber)
 }
 
-func (this *Manager) Unsubscribe(topic []byte, subscriber interface{}) error {
+func (this *Manager) Unsubscribe(topic []byte, subscriber matchbox.Subscriber) error {
 	return this.p.Unsubscribe(topic, subscriber)
 }
 
-func (this *Manager) Subscribers(topic []byte, qos byte, subs *[]interface{}, qoss *[]byte) error {
+func (this *Manager) Subscribers(topic []byte, qos byte, subs *[]matchbox.Subscriber, qoss *[]byte) error {
 	return this.p.Subscribers(topic, qos, subs, qoss)
 }
 

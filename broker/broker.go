@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/alexandercampbell-wf/matchbox"
 	"github.com/shurkaxaa/hmq/plugins/bridge"
 
 	"github.com/shurkaxaa/hmq/plugins/auth"
@@ -642,7 +643,7 @@ func (b *Broker) removeClient(c *client) {
 }
 
 func (b *Broker) PublishMessage(packet *packets.PublishPacket) {
-	var subs []interface{}
+	var subs []matchbox.Subscriber
 	var qoss []byte
 	b.mu.Lock()
 	err := b.topicsMgr.Subscribers([]byte(packet.TopicName), packet.Qos, &subs, &qoss)
