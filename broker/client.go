@@ -268,7 +268,8 @@ func (c *client) processClientPublish(packet *packets.PublishPacket) {
 	}
 
 	if c.broker.hooks != nil && !c.broker.hooks.Publish(c.broker, packet, c.info.authMeta) {
-		log.Error("Pub Topics Auth failed, ", zap.String("topic", topic), zap.String("ClientID", c.info.clientID))
+		log.Error("Pub Topics hook failed, ", zap.String("topic", topic), zap.String("ClientID", c.info.clientID))
+		c.Close()
 		return
 	}
 
