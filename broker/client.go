@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/alexandercampbell-wf/matchbox"
+	simplejson "github.com/bitly/go-simplejson"
 	"github.com/shurkaxaa/hmq/broker/lib/sessions"
 	"github.com/shurkaxaa/hmq/broker/lib/topics"
 	"github.com/shurkaxaa/hmq/plugins/bridge"
@@ -24,6 +25,11 @@ import (
 const (
 	// special pub topic for cluster info BrokerInfoTopic
 	BrokerInfoTopic = "broker000100101info"
+
+	// connection ytacking
+	ConntrackTopic    = "$SYS/broker/connection/clients"
+	ConntrackSubTopic = ConntrackTopic + "/+"
+
 	// CLIENT is an end user.
 	CLIENT = 0
 	// ROUTER is another router in the cluster.
@@ -179,6 +185,27 @@ func ProcessMessage(msg *Message) {
 
 	switch ca.(type) {
 	case *packets.ConnackPacket:
+		/*
+		 * In case of REMOTE (connect to other router) subscribe to $SYS/broker/connection/clients/" + clientID
+		 * We need to handle remote connected events at least to drop local connections with the same clientID
+		 */
+		switch c.typ {
+		case REMOTE:
+			packet := ca.(*packets.ConnackPacket)
+			log.Debug("ConnackPacket packet from REMOTE", zap.Int("ReturnCode", int(packet.ReturnCode)))
+			if int(packet.ReturnCode) != packets.Accepted {
+				break
+			}
+			subInfo := packets.NewControlPacket(packets.Subscribe).(*packets.SubscribePacket)
+			subInfo.Topics = append(subInfo.Topics, ConntrackSubTopic)
+			subInfo.Qoss = append(subInfo.Qoss, byte(topics.QosAtMostOnce))
+			if len(subInfo.Topics) > 0 {
+				err := c.WriterPacket(subInfo)
+				if err != nil {
+					log.Error("Can not subscribe to remote connection tracking:", zap.Error(err))
+				}
+			}
+		}
 	case *packets.ConnectPacket:
 	case *packets.PublishPacket:
 		packet := ca.(*packets.PublishPacket)
@@ -212,6 +239,8 @@ func (c *client) ProcessPublish(packet *packets.PublishPacket) {
 	case ROUTER:
 		c.processRouterPublish(packet)
 	case CLUSTER:
+		c.processClusterPublish(packet)
+	case REMOTE:
 		c.processRemotePublish(packet)
 	}
 
@@ -219,6 +248,42 @@ func (c *client) ProcessPublish(packet *packets.PublishPacket) {
 
 func (c *client) processRemotePublish(packet *packets.PublishPacket) {
 	log.Debug("Publish from remote")
+	topic := packet.TopicName
+	if !strings.HasPrefix(topic, ConntrackTopic) {
+		return
+	}
+	// Handle remote conntrack packet (broker.OnlineOfflineNotification)
+	// Close local connections with the same clientID if any
+	// packet.Payload = []byte(fmt.Sprintf(`{"clientID":"%s","online":%v,"timestamp":"%s"}`, clientID, online, time.Now().UTC().Format(time.RFC3339)))
+	js, err := simplejson.NewJson(packet.Payload)
+	if err != nil {
+		log.Warn("parse info message err", zap.Error(err))
+		return
+	}
+	clientID, err := js.Get("clientID").String()
+	if err != nil {
+		return
+	}
+	if clientID == "" {
+		log.Debug("No clientID found in conntrack message, ", zap.String("msg", string(packet.Payload)))
+		return
+	}
+	online, err := js.Get("online").Bool()
+	if err != nil || !online {
+		return
+	}
+	old, exist := c.broker.clients.Load(clientID)
+	if exist {
+		log.Warn("Local client exist, disconnecting ...", zap.String("clientID", c.info.clientID))
+		ol, ok := old.(*client)
+		if ok {
+			ol.Close()
+		}
+	}
+}
+
+func (c *client) processClusterPublish(packet *packets.PublishPacket) {
+	log.Debug("Publish from cluster")
 	if c.status == Disconnected {
 		return
 	}
