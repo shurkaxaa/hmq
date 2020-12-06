@@ -161,6 +161,7 @@ func (c *client) readLoop() {
 				b.SubmitWork(c.info.clientID, msg)
 				return
 			}
+			log.Debug("new packet from client:", zap.String("ClientID", c.info.clientID))
 
 			msg := &Message{
 				client: c,

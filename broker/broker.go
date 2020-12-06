@@ -124,6 +124,7 @@ func NewBroker(config *Config, hooks Hooks) (*Broker, error) {
 }
 
 func (b *Broker) SubmitWork(clientId string, msg *Message) {
+	log.Debug("SubmitWork client start:", zap.String("ClientID", clientId))
 	if b.wpool == nil {
 		b.wpool = pool.New(b.config.Worker)
 	}
@@ -135,7 +136,7 @@ func (b *Broker) SubmitWork(clientId string, msg *Message) {
 			ProcessMessage(msg)
 		})
 	}
-
+	log.Debug("SubmitWork client end:", zap.String("ClientID", clientId))
 }
 
 func (b *Broker) Start() {
