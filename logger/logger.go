@@ -22,16 +22,20 @@ func init() {
 
 // NewDevLogger return a logger for dev builds
 func NewDevLogger() (*zap.Logger, error) {
-	logCfg := zap.NewProductionConfig()
+	logCfg = zap.NewProductionConfig()
 	logCfg.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
 	// logCfg.DisableStacktrace = true
 	logCfg.EncoderConfig = encoderCfg
 	return logCfg.Build()
 }
 
+func SetLogLevel(level zapcore.Level) {
+	logCfg.Level.SetLevel(level)
+}
+
 // NewProdLogger return a logger for production builds
 func NewProdLogger() (*zap.Logger, error) {
-	logCfg := zap.NewProductionConfig()
+	logCfg = zap.NewProductionConfig()
 	logCfg.DisableStacktrace = true
 	logCfg.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
 	logCfg.EncoderConfig = encoderCfg
