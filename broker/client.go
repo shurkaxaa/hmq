@@ -774,6 +774,7 @@ func (c *client) Close() {
 }
 
 func (c *client) WriterPacket(packet packets.ControlPacket) error {
+	log.Debug("Write packet start", zap.String("clientID", c.info.clientID))
 	defer func() {
 		if err := recover(); err != nil {
 			log.Error("recover error, ", zap.Any("recover", r))
@@ -794,5 +795,6 @@ func (c *client) WriterPacket(packet packets.ControlPacket) error {
 	c.mu.Lock()
 	err := packet.Write(c.conn)
 	c.mu.Unlock()
+	log.Debug("Write packet end", zap.String("clientID", c.info.clientID))
 	return err
 }

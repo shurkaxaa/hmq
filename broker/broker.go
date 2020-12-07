@@ -663,6 +663,10 @@ func (b *Broker) PublishMessage(packet *packets.PublishPacket) {
 	log.Debug("Broker publish, got subscribers", zap.String("topic", packet.TopicName))
 	for _, sub := range subs {
 		s, ok := sub.(*subscription)
+		log.Debug("Notify subscriber", zap.String("brokerID", s.client.broker.id),
+			zap.String("clientID", s.client.info.clientID),
+			zap.String("addr", s.client.conn.RemoteAddr().String()),
+			zap.Uint16("keepalive", s.client.info.keepalive))
 		if ok {
 			err := s.client.WriterPacket(packet)
 			if err != nil {
