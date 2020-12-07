@@ -781,18 +781,22 @@ func (c *client) WriterPacket(packet packets.ControlPacket) error {
 		}
 	}()
 	if c.status == Disconnected {
+		log.Debug("Write packet end - Disconnected", zap.String("clientID", c.info.clientID))
 		return nil
 	}
 
 	if packet == nil {
+		log.Debug("Write packet end - packet == nil", zap.String("clientID", c.info.clientID))
 		return nil
 	}
 	if c.conn == nil {
+		log.Debug("Write packet end - connect lost ...", zap.String("clientID", c.info.clientID))
 		c.Close()
 		return errors.New("connect lost ....")
 	}
 
 	c.mu.Lock()
+	log.Debug("Write packet start - writing", zap.String("clientID", c.info.clientID))
 	err := packet.Write(c.conn)
 	c.mu.Unlock()
 	log.Debug("Write packet end", zap.String("clientID", c.info.clientID))
