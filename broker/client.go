@@ -805,7 +805,11 @@ func (c *client) WriterPacket(packet packets.ControlPacket) error {
 		return err
 	}
 	err := packet.Write(c.conn)
+	log.Debug("Write packet end", zap.String("clientID", c.info.clientID), zap.Error(err))
+
 	// TODO, disconnect on write error?
-	log.Debug("Write packet end", zap.String("clientID", c.info.clientID))
+	if err != nil {
+		c.Close()
+	}
 	return err
 }
