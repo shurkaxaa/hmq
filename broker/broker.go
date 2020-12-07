@@ -51,7 +51,6 @@ type Hooks interface {
 
 type Broker struct {
 	id          string
-	mu          sync.Mutex
 	config      *Config
 	tlsConfig   *tls.Config
 	wpool       *pool.WorkerPool
@@ -652,9 +651,7 @@ func (b *Broker) PublishMessage(packet *packets.PublishPacket) {
 	var subs []matchbox.Subscriber
 	var qoss []byte
 	log.Debug("Broker publish", zap.String("topic", packet.TopicName))
-	b.mu.Lock()
 	err := b.topicsMgr.Subscribers([]byte(packet.TopicName), packet.Qos, &subs, &qoss)
-	b.mu.Unlock()
 	if err != nil {
 		log.Error("search sub client error,  ", zap.Error(err))
 		return
@@ -663,11 +660,11 @@ func (b *Broker) PublishMessage(packet *packets.PublishPacket) {
 	log.Debug("Broker publish, got subscribers", zap.String("topic", packet.TopicName))
 	for _, sub := range subs {
 		s, ok := sub.(*subscription)
-		log.Debug("Notify subscriber", zap.String("brokerID", s.client.broker.id),
-			zap.String("clientID", s.client.info.clientID),
-			zap.String("addr", s.client.conn.RemoteAddr().String()),
-			zap.Uint16("keepalive", s.client.info.keepalive))
 		if ok {
+			log.Debug("Notify subscriber", zap.String("brokerID", s.client.broker.id),
+				zap.String("clientID", s.client.info.clientID),
+				zap.String("addr", s.client.conn.RemoteAddr().String()),
+				zap.Uint16("keepalive", s.client.info.keepalive))
 			err := s.client.WriterPacket(packet)
 			if err != nil {
 				log.Error("write message error,  ", zap.Error(err))

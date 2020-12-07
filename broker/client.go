@@ -802,11 +802,7 @@ func (c *client) WriterPacket(packet packets.ControlPacket) error {
 	timeOut := time.Second * time.Duration(c.info.keepalive)
 	if err := c.conn.SetWriteDeadline(time.Now().Add(timeOut)); err != nil {
 		log.Error("set write timeout error: ", zap.Error(err), zap.String("ClientID", c.info.clientID))
-		msg := &Message{
-			client: c,
-			packet: DisconnectedPacket,
-		}
-		c.broker.SubmitWork(c.info.clientID, msg)
+		return err
 	}
 	err := packet.Write(c.conn)
 	// TODO, disconnect on write error?
