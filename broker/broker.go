@@ -51,6 +51,7 @@ type Hooks interface {
 
 type Broker struct {
 	id          string
+	mu          sync.Mutex
 	config      *Config
 	tlsConfig   *tls.Config
 	wpool       *pool.WorkerPool
