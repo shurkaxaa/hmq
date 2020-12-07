@@ -331,12 +331,14 @@ func (b *Broker) handleConnection(typ int, conn net.Conn) {
 			clientAuthMeta = meta
 		}
 	}
+	log.Debug("Connection authorized ", zap.String("clientID", msg.ClientIdentifier))
 
 	err = connack.Write(conn)
 	if err != nil {
 		log.Error("send connack error, ", zap.Error(err), zap.String("clientID", msg.ClientIdentifier))
 		return
 	}
+	log.Debug("Connection ACKed ", zap.String("clientID", msg.ClientIdentifier))
 
 	willmsg := packets.NewControlPacket(packets.Publish).(*packets.PublishPacket)
 	if msg.WillFlag {
@@ -371,6 +373,7 @@ func (b *Broker) handleConnection(typ int, conn net.Conn) {
 		log.Error("get session error: ", zap.String("clientID", c.info.clientID))
 		return
 	}
+	log.Debug("Connection got session ", zap.String("clientID", c.info.clientID))
 
 	cid := c.info.clientID
 
@@ -390,8 +393,8 @@ func (b *Broker) handleConnection(typ int, conn net.Conn) {
 		b.clients.Store(cid, c)
 
 		b.OnlineOfflineNotification(cid, true)
+		log.Debug("Connection OnlineOfflineNotification completed", zap.String("clientID", c.info.clientID))
 		if b.hooks != nil {
-			c.session.CleanSession()
 			b.hooks.Connected(c.info.authMeta, c.session)
 		}
 		{
@@ -414,6 +417,7 @@ func (b *Broker) handleConnection(typ int, conn net.Conn) {
 		b.routes.Store(cid, c)
 	}
 
+	log.Debug("connection, run client loop ", zap.String("clientID", msg.ClientIdentifier))
 	c.readLoop()
 }
 
