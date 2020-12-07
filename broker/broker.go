@@ -391,6 +391,7 @@ func (b *Broker) handleConnection(typ int, conn net.Conn) {
 			}
 		}
 		b.clients.Store(cid, c)
+		log.Debug("Connection stored", zap.String("clientID", c.info.clientID))
 
 		b.OnlineOfflineNotification(cid, true)
 		log.Debug("Connection OnlineOfflineNotification completed", zap.String("clientID", c.info.clientID))
@@ -650,6 +651,7 @@ func (b *Broker) removeClient(c *client) {
 func (b *Broker) PublishMessage(packet *packets.PublishPacket) {
 	var subs []matchbox.Subscriber
 	var qoss []byte
+	log.Debug("Broker publish", zap.String("topic", packet.TopicName))
 	b.mu.Lock()
 	err := b.topicsMgr.Subscribers([]byte(packet.TopicName), packet.Qos, &subs, &qoss)
 	b.mu.Unlock()
@@ -658,6 +660,7 @@ func (b *Broker) PublishMessage(packet *packets.PublishPacket) {
 		return
 	}
 
+	log.Debug("Broker publish, got subscribers", zap.String("topic", packet.TopicName))
 	for _, sub := range subs {
 		s, ok := sub.(*subscription)
 		if ok {
@@ -667,6 +670,7 @@ func (b *Broker) PublishMessage(packet *packets.PublishPacket) {
 			}
 		}
 	}
+	log.Debug("Broker published", zap.String("topic", packet.TopicName))
 }
 
 func (b *Broker) BroadcastUnSubscribe(subs map[string]*subscription) {
