@@ -671,6 +671,7 @@ func (b *Broker) PublishMessage(packet *packets.PublishPacket) {
 			err := s.client.WriterPacket(packet)
 			if err != nil {
 				log.Error("write message error,  ", zap.Error(err))
+				// TODO, shoud we disconnect?
 			}
 		}
 	}
