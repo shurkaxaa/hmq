@@ -67,6 +67,7 @@ type client struct {
 	qoss        []byte
 	rmsgs       []*packets.PublishPacket
 	routeSubMap map[string]uint64
+	connectedAt int64 // milliseconds
 }
 
 type subscription struct {
@@ -119,6 +120,7 @@ func (c *client) init() {
 	c.subMap = make(map[string]*subscription)
 	c.topicsMgr = c.broker.topicsMgr
 	c.routeSubMap = make(map[string]uint64)
+	c.connectedAt = int64(time.Now().UnixNano() / 1e6)
 }
 
 func (c *client) readLoop() {
@@ -184,27 +186,27 @@ func ProcessMessage(msg *Message) {
 
 	switch ca.(type) {
 	case *packets.ConnackPacket:
-		/*
-		 * In case of REMOTE (connect to other router) subscribe to $SYS/broker/connection/clients/" + clientID
-		 * We need to handle remote connected events at least to drop local connections with the same clientID
-		 */
-		switch c.typ {
-		case REMOTE:
-			packet := ca.(*packets.ConnackPacket)
-			log.Debug("ConnackPacket packet from REMOTE", zap.Int("ReturnCode", int(packet.ReturnCode)))
-			if int(packet.ReturnCode) != packets.Accepted {
-				break
-			}
-			subInfo := packets.NewControlPacket(packets.Subscribe).(*packets.SubscribePacket)
-			subInfo.Topics = append(subInfo.Topics, ConntrackSubTopic)
-			subInfo.Qoss = append(subInfo.Qoss, byte(topics.QosAtMostOnce))
-			if len(subInfo.Topics) > 0 {
-				err := c.WriterPacket(subInfo)
-				if err != nil {
-					log.Error("Can not subscribe to remote connection tracking:", zap.Error(err))
-				}
-			}
-		}
+		// /*
+		//  * In case of REMOTE (connect to other router) subscribe to $SYS/broker/connection/clients/" + clientID
+		//  * We need to handle remote connected events at least to drop local connections with the same clientID
+		//  */
+		// switch c.typ {
+		// case REMOTE:
+		// 	packet := ca.(*packets.ConnackPacket)
+		// 	log.Debug("ConnackPacket packet from REMOTE", zap.Int("ReturnCode", int(packet.ReturnCode)))
+		// 	if int(packet.ReturnCode) != packets.Accepted {
+		// 		break
+		// 	}
+		// 	subInfo := packets.NewControlPacket(packets.Subscribe).(*packets.SubscribePacket)
+		// 	subInfo.Topics = append(subInfo.Topics, ConntrackSubTopic)
+		// 	subInfo.Qoss = append(subInfo.Qoss, byte(topics.QosAtMostOnce))
+		// 	if len(subInfo.Topics) > 0 {
+		// 		err := c.WriterPacket(subInfo)
+		// 		if err != nil {
+		// 			log.Error("Can not subscribe to remote connection tracking:", zap.Error(err))
+		// 		}
+		// 	}
+		// }
 	case *packets.ConnectPacket:
 	case *packets.PublishPacket:
 		packet := ca.(*packets.PublishPacket)

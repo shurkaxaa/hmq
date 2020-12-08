@@ -44,8 +44,8 @@ type Hooks interface {
 	// called on subscribe to authorize subscribe with client metadata from auth
 	Subscribe(*Broker, *packets.SubscribePacket, interface{}) bool
 
-	// called on connet/disconnect with client metadata from auth
-	Connected(interface{}, *sessions.Session)
+	// called on connet/disconnect with client metadata from auth, session and connection time
+	Connected(interface{}, *sessions.Session, int64)
 	Disconnected(interface{}, *sessions.Session)
 }
 
@@ -396,7 +396,7 @@ func (b *Broker) handleConnection(typ int, conn net.Conn) {
 		b.OnlineOfflineNotification(cid, true)
 		log.Debug("Connection OnlineOfflineNotification completed", zap.String("clientID", c.info.clientID))
 		if b.hooks != nil {
-			b.hooks.Connected(c.info.authMeta, c.session)
+			b.hooks.Connected(c.info.authMeta, c.session, c.connectedAt)
 		}
 		{
 			b.Publish(&bridge.Elements{
@@ -568,6 +568,24 @@ func (b *Broker) checkNodeExist(id, url string) bool {
 
 	}
 	return false
+}
+
+func (b *Broker) HandleRemoteClientConnected(clientID string, connectedAt int64, remote string) {
+	old, exist := b.clients.Load(clientID)
+	if exist {
+		log.Warn("Local client exist, checking ...", zap.String("clientID", clientID))
+		ol, ok := old.(*client)
+		if ol.connectedAt < connectedAt {
+			log.Warn("Local client disconnected by newer remote one ...",
+				zap.String("clientID", clientID),
+				zap.Int64("local connected", ol.connectedAt),
+				zap.Int64("remote connected", connectedAt),
+				zap.String("remote", remote))
+		}
+		if ok {
+			ol.Close()
+		}
+	}
 }
 
 func (b *Broker) CheckRemoteExist(remoteID, url string) bool {
