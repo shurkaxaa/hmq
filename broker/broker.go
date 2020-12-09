@@ -279,16 +279,16 @@ func (b *Broker) handleConnection(typ int, conn net.Conn) {
 	//process connect packet
 	packet, err := packets.ReadPacket(conn)
 	if err != nil {
-		log.Error("read connect packet error: ", zap.Error(err))
+		log.Info("read connect packet error: ", zap.Error(err))
 		return
 	}
 	if packet == nil {
-		log.Error("received nil packet")
+		log.Info("received nil packet")
 		return
 	}
 	msg, ok := packet.(*packets.ConnectPacket)
 	if !ok {
-		log.Error("received msg that was not Connect")
+		log.Info("received msg that was not Connect")
 		return
 	}
 
