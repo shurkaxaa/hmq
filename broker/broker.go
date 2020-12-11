@@ -389,7 +389,7 @@ func (b *Broker) handleConnection(typ int, conn net.Conn) {
 			log.Warn("client exist, close old...", zap.String("clientID", c.info.clientID))
 			ol, ok := old.(*client)
 			if ok {
-				ol.Close()
+				ol.CloseByReconnect(c.connectedAt)
 			}
 		}
 		b.clients.Store(cid, c)
@@ -585,7 +585,7 @@ func (b *Broker) HandleRemoteClientConnected(clientID string, connectedAt int64,
 				zap.String("remote", remote))
 		}
 		if ok {
-			ol.Close()
+			ol.CloseByReconnect(connectedAt)
 		}
 	}
 }
