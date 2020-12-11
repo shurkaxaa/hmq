@@ -46,7 +46,9 @@ type Hooks interface {
 
 	// called on connet/disconnect with client metadata from auth, session and connection time
 	Connected(interface{}, *sessions.Session, int64)
-	Disconnected(interface{}, *sessions.Session)
+
+	// called on connet/disconnect with client metadata from auth, session and reconnect flag
+	Disconnected(interface{}, *sessions.Session, bool)
 }
 
 type Broker struct {
