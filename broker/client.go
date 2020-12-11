@@ -714,14 +714,14 @@ func (c *client) ProcessPing() {
 }
 
 func (c *client) Close() {
-	c.close(false)
+	c.close(0)
 }
 
-func (c *client) CloseByReconnect() {
-	c.close(true)
+func (c *client) CloseByReconnect(reconnectAt int64) {
+	c.close(reconnectAt)
 }
 
-func (c *client) close(reconnect bool) {
+func (c *client) close(reconnectAt int64) {
 	if c.status == Disconnected {
 		return
 	}
@@ -762,7 +762,7 @@ func (c *client) close(reconnect bool) {
 			//offline notification
 			b.OnlineOfflineNotification(c.info.clientID, false)
 			if b.hooks != nil {
-				b.hooks.Disconnected(c.info.authMeta, c.session, reconnect)
+				b.hooks.Disconnected(c.info.authMeta, c.session, reconnectAt)
 			}
 		}
 
