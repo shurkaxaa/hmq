@@ -803,21 +803,10 @@ func (c *client) WriterPacket(packet packets.ControlPacket) error {
 		return errors.New("connect lost ....")
 	}
 
-	// we do not need mutex here
-	// https://golang.org/pkg/net/#Conn
-	// ... Multiple goroutines may invoke methods on a Conn simultaneously ...
 	log.Debug("Write packet start - writing", zap.String("clientID", c.info.clientID))
-
-	// TODO we need SetWriteDeadline to not lock forever? Why keep alive does not drop stalled connection?
-	timeOut := time.Second * time.Duration(c.info.keepalive)
-	if err := c.conn.SetWriteDeadline(time.Now().Add(timeOut)); err != nil {
-		log.Error("set write timeout error: ", zap.Error(err), zap.String("ClientID", c.info.clientID))
-		return err
-	}
 	err := packet.Write(c.conn)
 	log.Debug("Write packet end", zap.String("clientID", c.info.clientID), zap.Error(err))
 
-	// TODO, disconnect on write error?
 	if err != nil {
 		c.Close()
 	}
